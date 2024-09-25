@@ -1,0 +1,60 @@
+S = 16k
+n = 2
+N_b = 32
+n_a = 20
+
+o = 5 (2^5 = 32)
+N_linee = 512
+N_set = 256 (2 vie associative)
+i = 8
+t = 7
+
+rd A, B, C, D, E, F, G
+
+Indirizzi:
+
+    A  FE01Fh
+    B  02000h
+    C  0100Fh
+    D  02020h
+    E  FE00Fh
+    F  A0000h
+    G  0201Fh
+
+-> creare linee
+    
+         ---------------------------------
+    0   0|       |                        | 
+        1|       |                        | 
+         ---------------------------------
+    1   0|       |                        | 
+        1|       |                        | 
+         ---------------------------------
+                         ...
+         ---------------------------------
+    128 0|       |                        | 
+        1|       |                        | 
+         ---------------------------------
+                        ...
+
+-> operazioni
+
+    OP      T       SET     VIA     OFF
+    rd A    MI      0       0       31    <- carica anche E
+    rd B    MI      0       1       0
+    rd C    MI      128     0       15
+    rd D    MI      1       0       0
+    rd E    HIT
+    rd F    MI      0       1       0     <- sost linea con B
+    rd G    MC      0       0       31    <- l con G sost da rd F, sost A/E
+
+Come sarebbe cambiato se sequenza diversa?
+A, B, C, D, F, G, E
+
+si riprende stato in rd D
+
+rd F, MI, set 0, via 0, off 0, sost A/E
+rd G, hit
+rd E, MC, set 0, via 0, off 31, sost F
+
+

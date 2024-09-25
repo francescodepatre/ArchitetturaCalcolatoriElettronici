@@ -1,0 +1,71 @@
+SECTION data
+Sorg: db 'BUONESAME',0
+Dest: resb 100
+Vett: db 3,-2,10,-2,0,-10,1,1,2
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	mov es, ax
+	mov ax, Sorg
+	push ax
+	mov ax, Dest
+	push ax
+	mov ax, Vett
+	push ax
+	call ModificaStringa
+	add sp, 6
+	mov ax, Dest
+	push ax
+	call ScriviStringa
+	add sp, 2
+	mov ax, 4c00h
+	int 21h
+
+ModificaStringa:
+	push bp
+	mov bp, sp
+	mov si, [bp+8]	; Sorg
+	mov di, [bp+6]	; Dest
+	mov bx, [bp+4]	; Vett
+Ciclo:
+	lodsb
+	cmp al, 0
+	je Fine
+	mov ah, [bx]
+	sub al, ah
+	cmp al, 'A'
+	jl mettimeno	; con la differenza diventa "inferiore" a 'A'
+	cmp al, 'Z'
+	jg mettipiu		; con la differenza diventa "superiore" a 'Z'
+salta:
+	stosb			; compreso tra 'A' e 'Z' quindi memorizzo in Dest
+	inc bx
+	jmp Ciclo
+mettimeno:
+	mov al, '-'
+	jmp salta
+mettipiu:
+	mov al, '+'
+	jmp salta
+Fine:
+	stosb
+	pop bp
+	ret
+	
+ScriviStringa:
+	push bp
+	mov bp, sp
+	mov si,[bp+4]
+	mov	ah,0eh
+	mov	bx,0000h
+Stampa:	
+	lodsb
+	cmp al, 0
+	je fineStampa
+	int	10h
+	jmp Stampa
+fineStampa:
+	pop bp
+    	ret                   ;Ritorno alla procedura chiamante

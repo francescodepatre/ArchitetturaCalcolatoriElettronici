@@ -1,0 +1,53 @@
+SECTION data
+V1: dw 3, 7, -21, 22, 6
+V2: dw 9, 8, 22, 7, -9
+V3: dw -7, 15, 0, 31, 12
+N: db 5
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	mov es, ax
+	mov ax, V1
+	push ax
+	mov ax, V2
+	push ax
+	mov ax, V3
+	push ax
+	xor ah, ah
+	mov al, [N]
+	push ax
+	call CalcolaValori
+	add sp, 8
+	mov ax, 4c00h
+	int 21h
+
+CalcolaValori:
+	push bp
+	mov bp, sp
+	mov si, [bp+10]	; V1
+	mov di, [bp+8]	; V2
+	add di, [bp+4]	; sposto di su V2[N]
+	add di, [bp+4]	; sommo due volte N perchè sono word!! Quindi ogni valore occupa due byte
+	dec di
+	dec di			; decremento di 2 per puntare a V2[N-1]
+	mov bx, [bp+6]	; V3
+	mov cx, [bp+4]	; N
+	xor dx, dx
+Ciclo:
+	lodsw
+	add ax, [di]
+	cmp ax, [bx]
+	jle NonMaggiore
+	inc dx			; uso dx temporaneo per contare 
+NonMaggiore:
+	inc bx
+	inc bx			; sposto avanti bx per puntare alla successiva word di V3
+	dec di
+	dec di			; sposto indietro di per puntare alla precedente word di V2 
+	; nota: per si non devo farlo perchè lo fa già lodsw
+	loop Ciclo
+	mov ax, dx
+	pop bp
+	ret

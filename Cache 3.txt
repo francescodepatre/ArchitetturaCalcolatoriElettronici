@@ -1,0 +1,124 @@
+Cache da 1k
+	S = 1k
+
+2 Vie associative
+	n = 2
+
+Linee da 64 byte per linea
+	N_b = 64
+
+Spazio indirizzamento 16 bit
+	n_a = 16
+
+-> Calcolo numero di linee
+	N_linee = 1024 bytes / 64 bytes per linea = 16
+
+-> Numero di set
+	N_set = 16 linee / 2 vie = 8 -> i = 3 (bit per indirizzare set, index)
+	N_b = 64 -> o = 6 (bit per offset)
+	t = 16 - 3 - 6 = 7 (tag)
+
+-> Sequenza di accessi:
+
+	- rd A
+	- wr D
+	- wr B
+	- wr A
+	- rd C
+	- rd E
+
+Politica WB/WA (Write-Back, Write-Allocate), sost LRU (Least Recently Used)
+
+-> Indirizzi dati:
+	
+	A  F620h	<- ATTENZIONE! Se manca 'h' vuol dire che è decimale, non hex
+	B  001Fh
+	C  BE37h
+	D  FF43h
+	E  0031h
+
+-> In bit:
+
+	A  F620h	1111 0110 0010 0000
+	B  001Fh	0000 0000 0001 1111
+	C  BE37h	1011 1110 0011 0111
+	D  FF43h	1111 1111 0100 0011
+	E  0031h	0000 0000 0011 0001
+
+-> Tag, index, offset:
+
+
+				TAG      | IDX  | OFFSET
+	A  F620h	1111 011 | 0 00 | 10 0000
+	B  001Fh	0000 000 | 0 00 | 01 1111
+	C  BE37h	1011 111 | 0 00 | 11 0111
+	D  FF43h	1111 111 | 1 01 | 00 0011
+	E  0031h	0000 000 | 0 00 | 11 0001
+
+-> creare linee
+	
+    	---------------------------------
+    0	|    | 							| <- via 0
+    	|    | 							| <- via 1
+    	---------------------------------
+    5	|    | 							| 0
+    	|    | 							| 1
+
+-> Istruzioni:
+
+## rd A ##
+M.I., car. set 0, via 0, offset 32
+
+    	---------------------------------
+    0  0|1111011| 			A	    	| 
+       1|       | 				    	| 
+    	---------------------------------
+    5  0|       | 				    	| 
+       1|       | 				    	| 
+
+## wr D ##
+M.I., car. set 5, via 0, offset 3
+
+    	---------------------------------
+    0  0|1111011| 			A	    	| 
+       1|       | 				    	| 
+    	---------------------------------
+    5  0|1111111| 				    D	| 
+       1|       | 				    	| 
+
+## wr B ##
+M.I., per politica WA linea caricata in set 0 nella via 1 (perchè libera) con offset 110111 (31)
+
+    	---------------------------------
+    0  0|1111011| 			A	    	| 
+       1|0000000| 		 E    B	    	| 
+    	---------------------------------
+    5  0|1111111| 				    D	| 
+       1|       | 				    	| 
+
+E è stato allocato assieme a B, visto che hanno stesso tag e index, non viene caricato il dato ma tutta la linea, cambiano solo di offset
+
+## wr A ##
+Hit. Yeeee
+
+## rd C ##
+M.I., bisogno di sostituire una linea per fare spazio a linea contenente C.
+Car. set 0, via 1, offset 110111, sost B/E
+
+        ---------------------------------
+    0  0|1111011|           A           | 
+       1|1011111|       C               | 
+        ---------------------------------
+    5  0|1111111|                   D   | 
+       1|       |                       | 
+
+## rd E ##
+Non è Miss inevitabile perchè è stato caricato in precedenza con B, ma è stato appena sovrascritto da C, quindi si genera una _Miss di Conflitto_. Viene sostituito A, set 0, via 0, offset 110001. Caricato anche B perchè stesso index e tag
+
+        ---------------------------------
+    0  0|0000000|       E     B         | 
+       1|1011111|       C               | 
+        ---------------------------------
+    5  0|1111111|                   D   | 
+       1|       |                       | 
+

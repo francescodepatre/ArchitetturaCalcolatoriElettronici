@@ -1,0 +1,45 @@
+SECTION data
+Vett: db 3, -5, 7, 12, -3, 11, 22
+N: db 7
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	mov ax, Vett
+	push ax
+	xor ah, ah
+	mov al, [N]
+	push ax
+	call ScambiaValori
+	add sp, 4
+	mov ax, 4c00h
+	int 21h
+	
+ScambiaValori:
+	push bp
+	mov bp, sp
+	mov cx, [bp+4]	; N
+	dec cx			; NOTA: l'ultimo valore non va scambiato in ogni caso
+	mov si, [bp+6]	; Vett
+Ciclo:
+	mov ah, 00h
+	int 16h
+	cmp al, 1bh
+	je Fine
+	cmp al, 83		; l'utente ha premuto S
+	je Scambio
+	cmp al, 78		; l'utente ha premuto N
+	jne Ciclo
+	inc si			; mi sposto al prossimo carattere
+	loop Ciclo		; decrementa anche CX cioè N
+	jmp Fine
+Scambio:
+	lodsb			; elemento corrente in AL
+	mov ah, [si]	; prossimo elemento in AH - NOTA: lodsb ha già incrementanto SI
+	mov [si], al
+	mov [si-1], ah
+	loop Ciclo		; decrementa anche CX cioè N
+Fine:
+	pop bp
+	ret

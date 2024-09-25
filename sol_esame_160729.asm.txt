@@ -1,0 +1,85 @@
+SECTION data
+N: db 5
+V1: db 3, 7, 21, 22, 6
+V2: db 9, 2, 22, 11, 19
+Nmax: db 4
+S1: db "Valori superiori alla media maggiori di o uguali a Nmax",0
+S2: db "Valori superioti alla media minori di Nmax",0
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	mov es, ax
+	xor ah, ah
+	mov al, [N]
+	push ax
+	mov al, [Nmax]
+	push ax
+	mov ax, V1
+	push ax
+	mov ax, V2
+	push ax
+	mov ax, S1
+	push ax
+	mov ax, S2
+	push ax
+	call ContaSeSuperioreMedia
+	add sp, 12
+	mov ax, 4c00h
+	int 21h
+
+ContaSeSuperioreMedia:
+	push bp
+	mov bp, sp
+	mov si, [bp+10]	; V1
+	mov di, [bp+8]	; V2
+	xor ch, ch
+	mov cl, [bp+14]	; N
+	xor dx, dx
+	xor ah, ah
+Ciclo:
+	lodsb
+	add dx, ax
+	loop Ciclo
+	mov cl, [bp+14]	; N
+	mov ax, dx
+	xor dx, dx
+	div cx
+	xor dl, dl
+Ciclo2:
+	cmp [di], al
+	jle Inferiore
+	inc dl
+Inferiore:
+	inc di
+	loop Ciclo2
+	cmp dl, [bp+12]
+	jge ScriviS1
+	mov ax, [bp+4]
+	jmp Fine
+ScriviS1:
+	mov ax, [bp+6]
+Fine:
+	push ax
+	call ScriviStringa
+	add sp, 2
+	pop bp
+	ret
+	
+ScriviStringa:
+	push bp
+	mov bp, sp
+	mov si,[bp+4]
+	mov	ah,0eh
+	mov	bx,0000h
+Stampa:	
+	lodsb
+	cmp al, 0
+	je fineStampa
+	int	10h
+	jmp Stampa
+fineStampa:
+	pop bp
+    ret                   ;Ritorno alla procedura chiamante
+	

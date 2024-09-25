@@ -1,0 +1,85 @@
+SECTION data
+Sorg1: db 'Pera',0
+Sorg2: db 'Ascia',0
+Dest: resb 100
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	mov es, ax
+	mov si, Sorg1
+	mov bx, Sorg2
+	mov di, Dest
+CicloLettura:
+	mov ah, 00h
+	int 16h
+	cmp al, 1bh
+	je Fine
+	xor ah,ah
+	push ax
+	call CopiaAlternata
+	add sp, 2
+	jmp CicloLettura
+Fine:
+	mov [di], byte 0
+	mov di, Dest
+	push di
+	call ScriviStringa
+	add sp, 2
+	mov ax, 4c00h
+	int 21h
+
+CopiaAlternata:
+	push bp
+	mov bp, sp
+	mov ax, [bp+4]	; carattere letto
+	sub ax, 30h		; ottengo il numero dal codice ASCII
+	test al, 00000001b; verifico se pari o dispari
+	je Pari
+Dispari:			; devo prendere da Sorg2
+	mov cl, [bx]
+	cmp cl, 0		; verifico se ho ancora elementi in Sorg2
+	je FineSorg2
+	inc bx
+	jmp FineFunzione
+Pari:				; devo prendere da Sorg1
+	mov cl, [si]
+	cmp cl, 0		; verifico se ho ancora elementi in Sorg1
+	je Dispari		; se è finito Sorg1, copio Sorg2
+	inc si
+	jmp FineFunzione
+FineSorg2:			; se è finito Sorg2, copio Sorg1
+	mov cl, [si]
+	cmp cl, 0		; verifico se ho ancora elementi in Sorg1
+	je Fine			; sono finite entrambe, esci! USCITA UN PO' BRUSCA, MA OK
+	inc si
+	jmp FineFunzione
+FineSorg1:			; se è finito Sorg1, copio Sorg2
+	mov cl, [bx]
+	cmp cl, 0		; verifico se ho ancora elementi in Sorg2
+	je Fine			; sono finite entrambe, esci! USCITA UN PO' BRUSCA, MA OK
+	inc bx
+FineFunzione:
+	mov [di], cl
+	inc di
+	pop bp
+	ret
+	
+	
+	
+ScriviStringa:
+	push bp
+	mov bp, sp
+	mov si,[bp+4]
+	mov	ah,0eh
+	mov	bx,0000h
+Stampa:	
+	lodsb
+	cmp al, 0
+	je fineStampa
+	int	10h
+	jmp Stampa
+fineStampa:
+	pop bp
+    ret                   ;Ritorno alla procedura chiamante

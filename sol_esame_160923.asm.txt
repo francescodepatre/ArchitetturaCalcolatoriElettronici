@@ -1,0 +1,49 @@
+SECTION data
+Stringa: db 'ArchItEtTo'
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	xor cl, cl	; per ricordare se maiuscolo=0 o minuscolo=FF
+CicloLettura:
+	mov ah, 00h
+	int 16h
+	cmp al, 1bh
+	je Fine
+	xor ah,ah
+	push ax
+	mov ax, Stringa
+	push ax
+	call VisualizzaCaratteri
+	add sp, 4
+	jmp CicloLettura
+Fine:
+	mov ax, 4c00h
+	int 21h
+
+VisualizzaCaratteri:
+	push bp
+	mov bp, sp
+	mov si, [bp+4]	; Stringa
+	mov bx, [bp+6]	; carattere letto
+	sub bx, 30h		; ottengo il numero dal codice ASCII
+	mov al, [si+bx]	; carattere da stampare
+	cmp al, 61h		; se maggiore è una lettera minuscola
+	jae Minuscola
+Maiuscola:
+	cmp cl, 0		
+	je ok			; devo visualizzare maiuscola ed è maiuscola
+	add al, 20h		; devo visualizzare minuscola ma è maiuscola --> +20h
+	jmp ok
+Minuscola:
+	cmp cl, 0
+	jne ok			; devo visualizzare minuscolo ed è minuscola
+	sub al, 20h		; devo visualizzare maiuscolo ma è minuscola --> -20h
+ok:
+	mov	ah,0eh
+	mov	bx,0000h
+	int	10h
+	not cl			
+	pop bp
+	ret

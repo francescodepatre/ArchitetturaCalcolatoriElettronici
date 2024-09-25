@@ -1,0 +1,121 @@
+
+
+Sia data una cache da 32 KB, direct mapped. Ogni linea ha lunghezza 16 byte. Avendo uno spazio di indirizzamento a 20 bit: 
+a) si scrivano le dimensioni di tag, index e offset.
+    La cache adotta una politica di scrittura write through, not write allocate. 
+b) si riporti la sequenza di accessi specificando, per ogni accesso, se è hit o miss, nel caso di miss di che tipo, il set, il byte all’interno della linea, quali dati provocano la sostituzione e quali dati vengono sostituiti (politica di sostituzione LRU).
+
+
+memoria cache 32kB, 
+N_b = 16 bytes (16 per linea)
+spazio indirizzamento 20 bit
+n=1 [vie associative]
+n_e = 20
+
+viene chiesto: calcolare dimensinoe offset, index, tag:
+_________
+| t | i | o |  -> o bit meno significativi
+
+    S [size]= N_linee * Nb -> N_linee = S / Nb
+    N_linee = 32k / 16 = 2k
+    N_set = N_linee / n = 2K
+
+    o [offset] = log_2 N_b = 4
+    i = log_2 N_set = 11
+    t = n_e - i - o = 5
+
+
+Cache inizialmente vuota, svolte in sequenza le seguenti operazioni:
+rd A, wr B, rd C, rd D, rd E, wr F, rd G
+variabili tipo char, tutti dati sono da 1 byte
+
+Indirizzi:
+
+    A: F8003h
+    B: C8010h
+    C: C8011h
+    D: 00000h
+    E: 0001Fh
+    F: C8012h
+    G: C8013h
+
+
+Trasformare hex -> bin, identificare per ogni dato quanto valgono campi o, t
+
+Indirizzi:
+
+    A: F8003h 	-> 1111 1000 0000 0000 0011
+    B: C8010h 	-> 1100 1000 0000 0001 0000
+    C: C8011h 	-> 1100 1000 0000 0001 0001
+    D: 00000h 	-> 0000 0000 0000 0000 0000
+    E: 0001Fh 	-> 0000 0000 0000 0001 1111
+    F: C8012h  	-> 1100 1000 0000 0001 0010
+    G: C8013h 	-> 1100 1000 0000 0001 0011
+
+Tirare righe che separano offset, index, tag
+
+                   TAG        INDEX               OFFSET
+    A: F8003h 	-> 1111 1	| 000 0000 0000 	| 0011
+    B: C8010h 	-> 1100 1	| 000 0000 0001 	| 0000
+    C: C8011h 	-> 1100 1	| 000 0000 0001  	| 0001
+    D: 00000h 	-> 0000 0	| 000 0000 0000  	| 0000
+    E: 0001Fh 	-> 0000 0	| 000 0000 0001  	| 1111
+    F: C8012h  	-> 1100 1	| 000 0000 0001  	| 0010
+    G: C8013h 	-> 1100 1	| 000 0000 0001  	| 0011
+
+Servono per indicare dove e come gestire i dati nella cache:
+
+    [INDEX]: [TAG]   |     [ OFFSET ]     |
+    1:   
+    2:
+    ...       
+
+Si può capire cosa ogni evento genera (miss, hit…), se miss di quale tipo, set, via all’interno del set, byte all’interno della linea e quali dati rimpiazzati in caso di politica LRU
+
+    idx, data
+    0: ______
+    1: ______
+    2: ______
+    ...
+
+read A, index è 000 0000 0000 -> 0
+Non ci sono dati, quindi è MISS, 16 byte di A vengono caricati nella cache
+
+                15  		    3   	0
+    0: 111111 | 				A	     |
+    1: 			
+
+read 	A: miss inevit., caricato set 0, offset 3
+write 	B: miss inevit., non caricato
+
+C fa parte dello stesso blocco di B, cambia solo offset. Se fosse stato read B avrebbe fatto una hit. Miss dovuta a politica di scrittura, non si avrebbe avuta se fosse stato scritto in cache
+
+               15      		    3     0
+    0: 11111 | 		    		A       |
+    1: 11001 |                      C B |
+
+               15      		    3     0
+    0: 11111 | 		    		A       |
+    1: 11001 |                  G F C B |
+
+read 	C: "miss scrittura", caricato set 1, offset 1
+
+Per D: index è 0, quindi primo set. Prende TAG (00000), confronta con quelo presente (111111), miss. Carica nel set 0 con offset 0, sostituisce A
+
+read	D: miss inevit., caricato set 0, offset 0, sost A
+
+               15      		    3     0
+    0: 00000 | 		    		      D |
+    1: 11001 |                  G F C B |
+
+Per E: index è 1, tag = 0, confronto con attuale (11001), miss, inevitabile perchè mai acceduto con quel dato index (?), viene messo nel set 1, con offset 15, sostituisce G/F/C/B
+
+               15               3     0
+    0: 00000 |                        D |
+    1: 00000 | E                        |
+
+read    E: miss inevit., caricato set 1, offset 15, sost GFCB
+write   F: miss conflitto, per politica scrittura non modifica cache
+read    G: miss scritt/conf GH, caricato in set 1, offset 3, sost E
+
+[non ci saranno miss capacità, vorrebbe dire riempire intera cache]

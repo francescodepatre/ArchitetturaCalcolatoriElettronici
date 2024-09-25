@@ -1,0 +1,143 @@
+Esercizio caches
+
+Cache da 128k
+	S = 128k
+
+Due vie associative
+	n = 2
+
+Contenenti 2048 linee
+	N_linee = 2048
+
+Spazio indirizzamento 20 bit
+	N_a = 20
+
+? Scrivere Index, Tag, Offset
+
+-> Capire quanti byte ci sono in ogni linea
+128k con 2k linee, ogni linea contiene 64 byte
+	N_b = 128k / 2k = 64 byte
+
+Bit per offset
+	2^6 = 64
+	o = 6
+
+Index? Log_2 del numero di set, nel caso di una n vie associative bisogna dividere il numero di linee per la associatività.
+	N_set = 1k
+Raggruppate due a due per ottenere 1024 set
+	-> i = 10
+
+Di conseguenza il numero di bit per il tag è
+	t = 20-6-10 = 4
+
+? Devono essere svolte in sequenza le seguenti operazioni:
+
+	- rd A
+	- wr B
+	- rd C
+	- rd D
+	- rd E
+	- rd B
+	- wr E
+
+Var tipo char, politica di scrittura WT (write-through) / NWA (no-write-allocate)
+
+Indirizzi:
+
+	A  A803Ch
+	B  A0000h
+	C  B003Fh
+	D  B0040h
+	E  0
+
+-> tradurre in binario
+
+	A  A803Ch	1010 1000 0000 0011 1100
+	B  A0000h	1010 0000 0000 0000 0000
+	C  B003Fh	1011 0000 0000 0011 1111
+	D  B0040h	1011 0000 0000 0100 0000
+	E  00000h	0000 0000 0000 0000 0000
+
+-> individuare index, offset, tag
+
+				TAG  | INDEX 		| OFFSET
+	A  A803Ch	1010 | 1000 0000 00 | 11 1100
+	B  A0000h	1010 | 0000 0000 00 | 00 0000
+	C  B003Fh	1011 | 0000 0000 00 | 11 1111
+	D  B0040h	1011 | 0000 0000 01 | 00 0000
+	E  00000h	0000 | 0000 0000 00 | 00 0000
+
+-> creare linee
+	
+		---------------------------------
+		|    | 							| <- via 0
+		|    | 							| <- via 1
+		---------------------------------
+		|    | 							| 0
+		|    | 							| 1
+		---------------------------------
+		|    | 							| 0
+		|    | 							| 1
+		---------------------------------
+
+-> operazioni
+
+## rd A ##
+MI (miss inevitabile), lettura allocativa, caricato in set 512 nella via 0, offset 111100
+
+		---------------------------------
+		|    | 							| 0
+		|    | 							| 1
+		---------------------------------
+		|    | 							| 0
+		|    | 							| 1
+		---------------------------------
+	512	|1010| 	  A						| 0
+		|    | 							| 1
+		---------------------------------
+
+## wr B ##
+index e tag diverso da A, MI (miss inevitabile), per politica WA non viene allocato nulla, nessuna variazione nella cache
+
+## rd C ##
+index 0, è il set seguente:
+
+		---------------------------------
+	0	|1011| 	C						| 0
+		|    | 							| 1
+		---------------------------------
+		|    | 							| 0
+
+MI, caricato in set 0, via 0, offset 63
+
+## rd D ##
+MI, caricato nel set 1, ia 0, offset 0
+
+## rd E ##
+tag non uguale a presente, MI, dato caricato in set 0 in via 1
+
+		---------------------------------
+	0	|1011| 	C						| 0
+		|0000| 						  E	| 1
+		---------------------------------
+	1	|1011| 						  D	| 0
+
+obiettivo di via è di tenere dati che verranno utilizzati più probabilmente nella cache, se si ha via vuota si inserisce lì, se tutte piene ci sono diversi modi
+
+## rd B ##
+Miss ma non propriamente inevitabile perchè a B si ha già acceduto in scrittura e per politica di scrittura il dato non è caricato in cache, se lo fosse stato sarebbe stato caricato
+Una politica di scrittura diversa avrebbe potuto evitare questa miss, meglio scrivere "Miss Scrittura"
+
+read, quindi carica dato, linea B caricata in cache, set 0 (non vuoto), le due linee sono piene quindi una va rimpiazzata va con LRU. Tra linea che contiene C e linea che contiene E, è C quella a cui non si accede da più tempo, quindi viene sostituita
+Principio di località, leggera maggiore probabilità che si faccia accesso ad E (solo statistico), quindi viene sovrascritto C.
+
+B caricato in set 0, via 0, offset 0, sostituisce C
+
+		---------------------------------
+	0	|1010| 						  B	| 0 <- caricati dati
+		|0000| 						  E	| 1
+		---------------------------------
+	1	|1011| 						  D	| 0
+
+## wr E ##
+Hit, E è ancora al suo posto, modifica in cache e memoria centrale

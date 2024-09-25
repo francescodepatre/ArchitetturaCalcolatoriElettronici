@@ -1,0 +1,91 @@
+SECTION data
+Stringa: resb 100
+
+SECTION text
+..start:
+	mov ax, data
+	mov ds, ax
+	xor cl, cl	; conta i caratteri letti
+	xor ch, ch	; conta le vocali
+CicloLettura:
+	mov ah, 00h
+	int 16h
+	cmp al, 1bh
+	je Fine
+	push ax
+	mov ax, Stringa
+	push ax
+	call LeggiEModifica
+	add sp, 4
+	inc cl
+	jmp CicloLettura
+Fine:
+	; ZERO TERMINA STRINGA
+	xor ah, ah
+	mov al, cl
+	add si, ax
+	mov [si+1], byte 0
+	; SCRIVI STRINGA
+	mov ax, Stringa
+	push ax
+	call ScriviStringa
+	add sp, 2
+	mov ax, 4c00h
+	int 21h
+
+LeggiEModifica:
+	push bp
+	mov bp, sp
+	mov si, [bp+4]	; Stringa
+	mov dl, [bp+6]	; carattere letto
+	xor ah, ah
+	mov al, cl
+	add dl, cl
+	add si, ax
+	mov [si], dl
+	call ControllaVocale
+	pop bp
+	ret
+	
+ControllaVocale:
+	cmp dl, 'a'
+	je ok
+	cmp dl, 'e'
+	je ok
+	cmp dl, 'i'
+	je ok
+	cmp dl, 'o'
+	je ok
+	cmp dl, 'u'
+	je ok
+	cmp dl, 'A'
+	je ok
+	cmp dl, 'E'
+	je ok
+	cmp dl, 'I'
+	je ok
+	cmp dl, 'O'
+	je ok
+	cmp dl, 'O'
+	je ok
+	ret
+ok:
+	inc ch
+	ret
+	
+ScriviStringa:
+	push bp
+	mov bp, sp
+	mov si,[bp+4]
+	mov	ah,0eh
+	mov	bx,0000h
+Stampa:	
+	lodsb
+	cmp al, 0
+	je fineStampa
+	int	10h
+	jmp Stampa
+fineStampa:
+	pop bp
+    ret                   ;Ritorno alla procedura chiamante
+	
